@@ -1,0 +1,15 @@
+spring:
+  profiles:
+    active:
+server:
+  port: 8080
+logging:
+  level:
+    root: info
+    com.ajavac: debug
+  file: spring.log
+ftp:
+  port: 2121
+  username: admin
+  password: admin
+  home-dir: home
