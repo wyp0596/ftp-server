@@ -1,5 +1,7 @@
 package com.ajavac.ftp;
 
+import org.apache.ftpserver.DataConnectionConfiguration;
+import org.apache.ftpserver.DataConnectionConfigurationFactory;
 import org.apache.ftpserver.FtpServer;
 import org.apache.ftpserver.FtpServerFactory;
 import org.apache.ftpserver.ftplet.Authority;
@@ -32,8 +34,12 @@ public class MyFtpServer {
 
     private FtpServer ftpServer;
 
+    @Value("${server.host:localhost}")
+    private String host;
     @Value("${ftp.port:2121}")
     private int port;
+    @Value("${ftp.passive-ports:23300-23399}")
+    private String passivePorts;
     @Value("${ftp.username:admin}")
     private String username;
     @Value("${ftp.password:admin}")
@@ -44,12 +50,26 @@ public class MyFtpServer {
     @PostConstruct
     public void start() {
         FtpServerFactory serverFactory = new FtpServerFactory();
-        ListenerFactory factory = new ListenerFactory();
-        // set the port of the listener
-        factory.setPort(port);
-        // replace the default listener
-        serverFactory.addListener("default", factory.createListener());
 
+
+        ListenerFactory listenerFactory = new ListenerFactory();
+        // set the port of the listener
+        listenerFactory.setPort(port);
+        // set passive ports
+        DataConnectionConfigurationFactory dataConnectionConfigurationFactory =
+                new DataConnectionConfigurationFactory();
+        dataConnectionConfigurationFactory.setPassivePorts(passivePorts);
+        dataConnectionConfigurationFactory.setPassiveExternalAddress(host);
+
+        DataConnectionConfiguration dataConnectionConfiguration =
+                dataConnectionConfigurationFactory.createDataConnectionConfiguration();
+        listenerFactory.setDataConnectionConfiguration(dataConnectionConfiguration);
+
+        // replace the default listener
+        serverFactory.addListener("default", listenerFactory.createListener());
+
+
+        // set user manager
 
         PropertiesUserManagerFactory userManagerFactory = new PropertiesUserManagerFactory();
         UserManager um = userManagerFactory.createUserManager();
@@ -77,6 +97,7 @@ public class MyFtpServer {
         }
         if (logger.isInfoEnabled()) {
             logger.info("ftp启动成功,端口号:" + port);
+            logger.info("ftp启动成功,被动端口:" + passivePorts);
         }
     }
 
