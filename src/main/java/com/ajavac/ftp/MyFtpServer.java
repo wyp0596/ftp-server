@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +50,15 @@ public class MyFtpServer {
 
     @PostConstruct
     public void start() {
+        //检查目录是否存在,不存在则创建目录
+        File home = Paths.get(homeDir).toFile();
+        if (!home.exists()) {
+            boolean result = home.mkdir();
+            if (!result) {
+                logger.warn("创建目录失败", home.getAbsolutePath());
+            }
+        }
+
         FtpServerFactory serverFactory = new FtpServerFactory();
 
 

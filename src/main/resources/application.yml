@@ -1,6 +1,10 @@
 spring:
   profiles:
     active:
+  resources:
+      static-locations: file:${ftp.home-dir}
+  mvc:
+    static-path-pattern: /res/**
 server:
   host: localhost
   port: 8080
@@ -14,4 +18,4 @@ ftp:
   passive-ports: 23300-23399
   username: admin
   password: admin
-  home-dir: home
+  home-dir: res/
