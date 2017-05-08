@@ -1,6 +1,7 @@
 package com.ajavac.api;
 
 import com.ajavac.dto.FTPInfo;
+import com.ajavac.dto.UserInfo;
 import com.ajavac.ftp.MyFtpServer;
 import org.apache.ftpserver.ftplet.FtpException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,12 @@ public class FtpAPI {
     @PostMapping("setHomeDir")
     public FTPInfo setHomeDir(@RequestBody FTPInfo ftpInfo) throws FtpException, IOException {
         myFtpServer.setHomeDir(ftpInfo.getHomeDir());
+        return myFtpServer.getFTPInfo();
+    }
+
+    @PostMapping("setPassword")
+    public FTPInfo setPassword(@RequestBody UserInfo userInfo) throws FtpException {
+        myFtpServer.setPassword(userInfo);
         return myFtpServer.getFTPInfo();
     }
 }

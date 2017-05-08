@@ -1,18 +1,17 @@
 package com.ajavac.ftp;
 
 import com.ajavac.dto.FTPInfo;
+import com.ajavac.dto.UserInfo;
 import com.ajavac.util.Properties;
 import com.ajavac.util.PropertiesHelper;
 import org.apache.ftpserver.DataConnectionConfiguration;
 import org.apache.ftpserver.DataConnectionConfigurationFactory;
 import org.apache.ftpserver.FtpServer;
 import org.apache.ftpserver.FtpServerFactory;
-import org.apache.ftpserver.ftplet.Authority;
-import org.apache.ftpserver.ftplet.FtpException;
-import org.apache.ftpserver.ftplet.User;
-import org.apache.ftpserver.ftplet.UserManager;
+import org.apache.ftpserver.ftplet.*;
 import org.apache.ftpserver.listener.ListenerFactory;
 import org.apache.ftpserver.usermanager.PropertiesUserManagerFactory;
+import org.apache.ftpserver.usermanager.UsernamePasswordAuthentication;
 import org.apache.ftpserver.usermanager.impl.BaseUser;
 import org.apache.ftpserver.usermanager.impl.TransferRatePermission;
 import org.apache.ftpserver.usermanager.impl.TransferRateRequest;
@@ -137,6 +136,21 @@ public class MyFtpServer {
             user.setAuthorities(authorities);
             um.save(user);
         }
+    }
+
+    /**
+     * 修改密码
+     *
+     * @param userInfo 用户信息
+     * @throws FtpException                  FTP异常
+     * @throws AuthenticationFailedException 验证用户异常
+     */
+    public void setPassword(UserInfo userInfo) throws FtpException {
+        String username = um.getAdminName();
+        User savedUser = um.authenticate(new UsernamePasswordAuthentication(username, userInfo.getOldPassword()));
+        BaseUser baseUser = new BaseUser(savedUser);
+        baseUser.setPassword(userInfo.getPassword());
+        um.save(baseUser);
     }
 
     /**
