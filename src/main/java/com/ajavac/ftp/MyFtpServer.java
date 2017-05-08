@@ -1,16 +1,21 @@
 package com.ajavac.ftp;
 
+import com.ajavac.dto.FTPInfo;
+import com.ajavac.util.Properties;
+import com.ajavac.util.PropertiesHelper;
 import org.apache.ftpserver.DataConnectionConfiguration;
 import org.apache.ftpserver.DataConnectionConfigurationFactory;
 import org.apache.ftpserver.FtpServer;
 import org.apache.ftpserver.FtpServerFactory;
 import org.apache.ftpserver.ftplet.Authority;
 import org.apache.ftpserver.ftplet.FtpException;
+import org.apache.ftpserver.ftplet.User;
 import org.apache.ftpserver.ftplet.UserManager;
 import org.apache.ftpserver.listener.ListenerFactory;
 import org.apache.ftpserver.usermanager.PropertiesUserManagerFactory;
 import org.apache.ftpserver.usermanager.impl.BaseUser;
-import org.apache.ftpserver.usermanager.impl.ConcurrentLoginPermission;
+import org.apache.ftpserver.usermanager.impl.TransferRatePermission;
+import org.apache.ftpserver.usermanager.impl.TransferRateRequest;
 import org.apache.ftpserver.usermanager.impl.WritePermission;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +25,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +40,11 @@ public class MyFtpServer {
     private static final Logger logger = LoggerFactory.getLogger(MyFtpServer.class);
 
     private FtpServer ftpServer;
+    private UserManager um;
+
+    private static final String CONFIG_FILE_NAME = "application.properties";
+    private static final String USERS_FILE_NAME = "users.properties";
+    private static final int MAX_IDLE_TIME = 300;
 
     @Value("${server.host:localhost}")
     private String host;
@@ -48,19 +59,20 @@ public class MyFtpServer {
     @Value("${ftp.home-dir:home}")
     private String homeDir;
 
+
     @PostConstruct
-    public void start() {
+    private void start() {
         //检查目录是否存在,不存在则创建目录
-        File home = Paths.get(homeDir).toFile();
-        if (!home.exists()) {
-            boolean result = home.mkdir();
-            if (!result) {
-                logger.warn("创建目录失败", home.getAbsolutePath());
-            }
+        mkDir(homeDir);
+        //创建配置文件
+        try {
+            createConfigFile();
+        } catch (IOException e) {
+            logger.warn("创建配置文件异常", e);
         }
 
-        FtpServerFactory serverFactory = new FtpServerFactory();
 
+        FtpServerFactory serverFactory = new FtpServerFactory();
 
         ListenerFactory listenerFactory = new ListenerFactory();
         // set the port of the listener
@@ -82,19 +94,14 @@ public class MyFtpServer {
         // set user manager
 
         PropertiesUserManagerFactory userManagerFactory = new PropertiesUserManagerFactory();
-        UserManager um = userManagerFactory.createUserManager();
-        List<Authority> authorities = new ArrayList<>();
-        authorities.add(new WritePermission());
-        authorities.add(new ConcurrentLoginPermission(800, 200));
-        BaseUser user = new BaseUser();
-        user.setName(username);
-        user.setPassword(password);
-        user.setHomeDirectory(new File(homeDir).getAbsolutePath());
-        user.setAuthorities(authorities);
+        userManagerFactory.setFile(new File(USERS_FILE_NAME));
+        userManagerFactory.setAdminName(username);
+        um = userManagerFactory.createUserManager();
         try {
-            um.save(user);
+            initUser();
         } catch (FtpException e) {
-            logger.warn("ftp启动异常", e);
+            logger.warn("init user fail:", e);
+            return;
         }
 
         serverFactory.setUserManager(um);
@@ -105,20 +112,126 @@ public class MyFtpServer {
         } catch (FtpException e) {
             logger.warn("ftp启动异常", e);
         }
-        if (logger.isInfoEnabled()) {
-            logger.info("ftp启动成功,端口号:" + port);
-            logger.info("ftp启动成功,被动端口:" + passivePorts);
-        }
+        logger.info("ftp启动成功,端口号:" + port);
+        logger.info("ftp启动成功,被动端口:" + passivePorts);
     }
 
     @PreDestroy
-    public void stop() {
+    private void stop() {
         if (ftpServer != null) {
             ftpServer.stop();
         }
     }
 
-    public FtpServer getFtpServer() {
-        return ftpServer;
+    private void initUser() throws FtpException {
+        boolean exist = um.doesExist(username);
+        // need to init user
+        if (!exist) {
+            List<Authority> authorities = new ArrayList<>();
+            authorities.add(new WritePermission());
+            BaseUser user = new BaseUser();
+            user.setName(username);
+            user.setPassword(password);
+            user.setHomeDirectory(homeDir);
+            user.setMaxIdleTime(MAX_IDLE_TIME);
+            user.setAuthorities(authorities);
+            um.save(user);
+        }
+    }
+
+    /**
+     * 修改主目录
+     *
+     * @param homeDir 主目录,可以是相对目录
+     * @throws FtpException FTP异常
+     */
+    public void setHomeDir(String homeDir) throws FtpException, IOException {
+        User userInfo = um.getUserByName(um.getAdminName());
+        BaseUser baseUser = new BaseUser(userInfo);
+        mkDir(homeDir);
+        baseUser.setHomeDirectory(homeDir);
+        um.save(baseUser);
+        //保存配置
+        Properties ftpProperties = PropertiesHelper.getProperties(CONFIG_FILE_NAME);
+        if (!homeDir.endsWith("/")) {
+            homeDir += "/";
+        }
+        ftpProperties.setProperty("ftp.home-dir", homeDir);
+        PropertiesHelper.saveProperties(ftpProperties, CONFIG_FILE_NAME);
+    }
+
+    /**
+     * 修改最大下载速度
+     *
+     * @param maxDownloadRate 最大下载速度,单位Byte
+     * @throws FtpException FTP异常
+     */
+    public void setMaxDownloadRate(int maxDownloadRate) throws FtpException {
+        int maxUploadRate = getFTPInfo().getMaxUploadRate();
+        saveTransferRateInfo(maxUploadRate, maxDownloadRate);
+    }
+
+    /**
+     * 修改最大上传速度
+     *
+     * @param maxUploadRate 最大上传速度,单位Byte
+     * @throws FtpException FTP异常
+     */
+    public void setMaxUploadRate(int maxUploadRate) throws FtpException {
+        int maxDownloadRate = getFTPInfo().getMaxDownloadRate();
+        saveTransferRateInfo(maxUploadRate, maxDownloadRate);
+    }
+
+    private void saveTransferRateInfo(int maxUploadRate, int maxDownloadRate) throws FtpException {
+        User userInfo = um.getUserByName(um.getAdminName());
+        BaseUser baseUser = new BaseUser(userInfo);
+        List<Authority> authorities = new ArrayList<>();
+        authorities.add(new WritePermission());
+        authorities.add(new TransferRatePermission(maxDownloadRate, maxUploadRate));
+        baseUser.setAuthorities(authorities);
+        um.save(baseUser);
+    }
+
+    /**
+     * 获取FTP信息
+     *
+     * @return FTP信息
+     * @throws FtpException FTP异常
+     */
+    public FTPInfo getFTPInfo() throws FtpException {
+        User userInfo = um.getUserByName(um.getAdminName());
+        TransferRateRequest transferRateRequest = (TransferRateRequest) userInfo
+                .authorize(new TransferRateRequest());
+        return new FTPInfo(host, port, Paths.get(homeDir).toFile().getAbsolutePath(),
+                transferRateRequest.getMaxDownloadRate(), transferRateRequest.getMaxUploadRate());
+    }
+
+    private void mkDir(String dir) {
+        File dirFile = Paths.get(dir).toFile();
+        if (!dirFile.exists()) {
+            boolean result = dirFile.mkdir();
+            if (!result) {
+                logger.warn("创建目录失败");
+                return;
+            }
+            logger.info("创建目录成功");
+        }
+    }
+
+    private void createConfigFile() throws IOException {
+        File configFile = new File(CONFIG_FILE_NAME);
+        if (!configFile.exists()) {
+            boolean result = configFile.createNewFile();
+            if (!result) {
+                logger.warn("创建配置文件失败");
+            }
+        }
+        File usersFile = new File(USERS_FILE_NAME);
+        if (!usersFile.exists()) {
+            boolean result = usersFile.createNewFile();
+            if (!result) {
+                logger.warn("创建配置文件失败");
+            }
+        }
     }
 }

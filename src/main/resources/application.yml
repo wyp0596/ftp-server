@@ -1,12 +1,10 @@
 spring:
-  profiles:
-    active:
   resources:
       static-locations: file:${ftp.home-dir}
   mvc:
     static-path-pattern: /res/**
 server:
-  host: localhost
+  host: localhost # This should be your server's real IP
   port: 8080
 logging:
   level:

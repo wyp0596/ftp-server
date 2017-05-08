@@ -1,4 +1,0 @@
-logging:
-  level:
-    root: info
-    com.centerm: debug
