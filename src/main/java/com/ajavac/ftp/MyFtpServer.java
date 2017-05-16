@@ -227,7 +227,7 @@ public class MyFtpServer {
         long totalSpace = path.getTotalSpace();
         long usedSpace = totalSpace - path.getUsableSpace();
 
-        return new FTPInfo(host, port, Paths.get(homeDir).toFile().getAbsolutePath(),
+        return new FTPInfo(host, port, Paths.get(userInfo.getHomeDirectory()).toFile().getAbsolutePath(),
                 transferRateRequest.getMaxDownloadRate() / 1024,
                 transferRateRequest.getMaxUploadRate() / 1024,
                 usedSpace / 1024 / 1024 / 1024, totalSpace / 1024 / 1024 / 1024);
