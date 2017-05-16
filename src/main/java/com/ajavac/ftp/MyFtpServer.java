@@ -223,11 +223,11 @@ public class MyFtpServer {
         User userInfo = um.getUserByName(um.getAdminName());
         TransferRateRequest transferRateRequest = (TransferRateRequest) userInfo
                 .authorize(new TransferRateRequest());
-        File path = new File("/");
-        long totalSpace = path.getTotalSpace();
-        long usedSpace = totalSpace - path.getUsableSpace();
+        File homeDir = Paths.get(userInfo.getHomeDirectory()).toFile();
+        long totalSpace = homeDir.getTotalSpace();
+        long usedSpace = totalSpace - homeDir.getUsableSpace();
 
-        return new FTPInfo(host, port, Paths.get(userInfo.getHomeDirectory()).toFile().getAbsolutePath(),
+        return new FTPInfo(host, port, homeDir.getAbsolutePath(),
                 transferRateRequest.getMaxDownloadRate() / 1024,
                 transferRateRequest.getMaxUploadRate() / 1024,
                 usedSpace, totalSpace);
