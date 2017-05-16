@@ -230,7 +230,7 @@ public class MyFtpServer {
         return new FTPInfo(host, port, Paths.get(userInfo.getHomeDirectory()).toFile().getAbsolutePath(),
                 transferRateRequest.getMaxDownloadRate() / 1024,
                 transferRateRequest.getMaxUploadRate() / 1024,
-                usedSpace / 1024 / 1024 / 1024, totalSpace / 1024 / 1024 / 1024);
+                usedSpace, totalSpace);
     }
 
     private void mkDir(String dir) {

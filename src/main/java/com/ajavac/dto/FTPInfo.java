@@ -10,8 +10,8 @@ public class FTPInfo {
     private String homeDir;
     private int maxDownloadRate; // KB
     private int maxUploadRate; // KB
-    private long usedSpace; // G
-    private long totalSpace; // G
+    private float usedSpace; // G
+    private float totalSpace; // G
 
     public FTPInfo() {
     }
@@ -23,8 +23,8 @@ public class FTPInfo {
         this.homeDir = homeDir;
         this.maxDownloadRate = maxDownloadRate;
         this.maxUploadRate = maxUploadRate;
-        this.usedSpace = usedSpace;
-        this.totalSpace = totalSpace;
+        this.usedSpace = Float.parseFloat(String.format("%.2f", usedSpace * 1.0 / 1024 / 1024 / 1024));
+        this.totalSpace = Float.parseFloat(String.format("%.2f", totalSpace * 1.0 / 1024 / 1024 / 1024));
     }
 
     public String getHost() {
@@ -80,19 +80,19 @@ public class FTPInfo {
                 '}';
     }
 
-    public long getUsedSpace() {
+    public float getUsedSpace() {
         return usedSpace;
     }
 
-    public void setUsedSpace(long usedSpace) {
+    public void setUsedSpace(float usedSpace) {
         this.usedSpace = usedSpace;
     }
 
-    public long getTotalSpace() {
+    public float getTotalSpace() {
         return totalSpace;
     }
 
-    public void setTotalSpace(long totalSpace) {
+    public void setTotalSpace(float totalSpace) {
         this.totalSpace = totalSpace;
     }
 }
