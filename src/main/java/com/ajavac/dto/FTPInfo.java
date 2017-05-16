@@ -8,8 +8,8 @@ public class FTPInfo {
     private String host;
     private int port;
     private String homeDir;
-    private int maxDownloadRate;
-    private int maxUploadRate;
+    private int maxDownloadRate; // KB
+    private int maxUploadRate; // KB
     private long usedSpace; // G
     private long totalSpace; // G
 

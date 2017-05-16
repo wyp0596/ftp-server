@@ -177,25 +177,32 @@ public class MyFtpServer {
     /**
      * 修改最大下载速度
      *
-     * @param maxDownloadRate 最大下载速度,单位Byte
+     * @param maxDownloadRate 最大下载速度,单位KB
      * @throws FtpException FTP异常
      */
     public void setMaxDownloadRate(int maxDownloadRate) throws FtpException {
         int maxUploadRate = getFTPInfo().getMaxUploadRate();
-        saveTransferRateInfo(maxUploadRate, maxDownloadRate);
+        saveTransferRateInfo(maxUploadRate * 1024, maxDownloadRate * 1024);
     }
 
     /**
      * 修改最大上传速度
      *
-     * @param maxUploadRate 最大上传速度,单位Byte
+     * @param maxUploadRate 最大上传速度,单位KB
      * @throws FtpException FTP异常
      */
     public void setMaxUploadRate(int maxUploadRate) throws FtpException {
         int maxDownloadRate = getFTPInfo().getMaxDownloadRate();
-        saveTransferRateInfo(maxUploadRate, maxDownloadRate);
+        saveTransferRateInfo(maxUploadRate * 1024, maxDownloadRate * 1024);
     }
 
+    /**
+     * 保存传输速率限制信息
+     *
+     * @param maxUploadRate   最大上传速度,单位B
+     * @param maxDownloadRate 最大下载速度,单位B
+     * @throws FtpException FTP异常
+     */
     private void saveTransferRateInfo(int maxUploadRate, int maxDownloadRate) throws FtpException {
         User userInfo = um.getUserByName(um.getAdminName());
         BaseUser baseUser = new BaseUser(userInfo);
@@ -221,7 +228,8 @@ public class MyFtpServer {
         long usedSpace = totalSpace - path.getUsableSpace();
 
         return new FTPInfo(host, port, Paths.get(homeDir).toFile().getAbsolutePath(),
-                transferRateRequest.getMaxDownloadRate(), transferRateRequest.getMaxUploadRate(),
+                transferRateRequest.getMaxDownloadRate() / 1024,
+                transferRateRequest.getMaxUploadRate() / 1024,
                 usedSpace / 1024 / 1024 / 1024, totalSpace / 1024 / 1024 / 1024);
     }
 
