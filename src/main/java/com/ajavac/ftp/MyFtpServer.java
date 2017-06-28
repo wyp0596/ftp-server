@@ -12,10 +12,7 @@ import org.apache.ftpserver.ftplet.*;
 import org.apache.ftpserver.listener.ListenerFactory;
 import org.apache.ftpserver.usermanager.PropertiesUserManagerFactory;
 import org.apache.ftpserver.usermanager.UsernamePasswordAuthentication;
-import org.apache.ftpserver.usermanager.impl.BaseUser;
-import org.apache.ftpserver.usermanager.impl.TransferRatePermission;
-import org.apache.ftpserver.usermanager.impl.TransferRateRequest;
-import org.apache.ftpserver.usermanager.impl.WritePermission;
+import org.apache.ftpserver.usermanager.impl.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -128,6 +125,7 @@ public class MyFtpServer {
         if (!exist) {
             List<Authority> authorities = new ArrayList<>();
             authorities.add(new WritePermission());
+            authorities.add(new ConcurrentLoginPermission(2000, 2000));
             BaseUser user = new BaseUser();
             user.setName(username);
             user.setPassword(password);
