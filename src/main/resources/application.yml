@@ -13,7 +13,7 @@ logging:
   file: spring.log
 ftp:
   port: 2121
-  passive-ports: 23300-23399
+  passive-ports:
   username: admin
   password: admin
   home-dir: res/

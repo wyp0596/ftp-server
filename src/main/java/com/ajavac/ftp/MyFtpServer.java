@@ -4,10 +4,7 @@ import com.ajavac.dto.FTPInfo;
 import com.ajavac.dto.UserInfo;
 import com.ajavac.util.Properties;
 import com.ajavac.util.PropertiesHelper;
-import org.apache.ftpserver.DataConnectionConfiguration;
-import org.apache.ftpserver.DataConnectionConfigurationFactory;
-import org.apache.ftpserver.FtpServer;
-import org.apache.ftpserver.FtpServerFactory;
+import org.apache.ftpserver.*;
 import org.apache.ftpserver.ftplet.*;
 import org.apache.ftpserver.listener.ListenerFactory;
 import org.apache.ftpserver.usermanager.PropertiesUserManagerFactory;
@@ -25,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * ftp服务器
@@ -42,17 +40,17 @@ public class MyFtpServer {
     private static final String USERS_FILE_NAME = "users.properties";
     private static final int MAX_IDLE_TIME = 300;
 
-    @Value("${server.host:localhost}")
+    @Value("${server.host}")
     private String host;
-    @Value("${ftp.port:2121}")
+    @Value("${ftp.port}")
     private int port;
-    @Value("${ftp.passive-ports:23300-23399}")
+    @Value("${ftp.passive-ports}")
     private String passivePorts;
-    @Value("${ftp.username:admin}")
+    @Value("${ftp.username}")
     private String username;
-    @Value("${ftp.password:admin}")
+    @Value("${ftp.password}")
     private String password;
-    @Value("${ftp.home-dir:home}")
+    @Value("${ftp.home-dir}")
     private String homeDir;
 
 
@@ -70,25 +68,33 @@ public class MyFtpServer {
 
         FtpServerFactory serverFactory = new FtpServerFactory();
 
+        // FTP服务连接配置
+        ConnectionConfigFactory connectionConfigFactory = new ConnectionConfigFactory();
+        connectionConfigFactory.setAnonymousLoginEnabled(false);
+        connectionConfigFactory.setMaxLogins(0);
+        serverFactory.setConnectionConfig(connectionConfigFactory.createConnectionConfig());
+
         ListenerFactory listenerFactory = new ListenerFactory();
-        // set the port of the listener
+        // 配置FTP端口
         listenerFactory.setPort(port);
-        // set passive ports
-        DataConnectionConfigurationFactory dataConnectionConfigurationFactory =
-                new DataConnectionConfigurationFactory();
-        dataConnectionConfigurationFactory.setPassivePorts(passivePorts);
-        dataConnectionConfigurationFactory.setPassiveExternalAddress(host);
+        // 被动模式配置(按需)
+        if (!Objects.equals(passivePorts, "")) {
+            DataConnectionConfigurationFactory dataConnectionConfFactory = new DataConnectionConfigurationFactory();
+            logger.info("进行被动模式配置, 被动端口号范围:{}", passivePorts);
+            dataConnectionConfFactory.setPassivePorts(passivePorts);
+            if (!(Objects.equals(host, "localhost") || Objects.equals(host, "127.0.0.1"))) {
+                logger.info("进行被动模式配置,本机地址:{}", host);
+                dataConnectionConfFactory.setPassiveExternalAddress(host);
+            }
+            listenerFactory.setDataConnectionConfiguration(
+                    dataConnectionConfFactory.createDataConnectionConfiguration());
+        }
 
-        DataConnectionConfiguration dataConnectionConfiguration =
-                dataConnectionConfigurationFactory.createDataConnectionConfiguration();
-        listenerFactory.setDataConnectionConfiguration(dataConnectionConfiguration);
-
-        // replace the default listener
+        // 替换默认监听器
         serverFactory.addListener("default", listenerFactory.createListener());
 
 
-        // set user manager
-
+        // 设置用户控制中心
         PropertiesUserManagerFactory userManagerFactory = new PropertiesUserManagerFactory();
         userManagerFactory.setFile(new File(USERS_FILE_NAME));
         userManagerFactory.setAdminName(username);
@@ -99,17 +105,17 @@ public class MyFtpServer {
             logger.warn("init user fail:", e);
             return;
         }
-
         serverFactory.setUserManager(um);
-        // start the ftpServer
+
+        // 创建并启动FTP服务
         ftpServer = serverFactory.createServer();
         try {
             ftpServer.start();
         } catch (FtpException e) {
             logger.warn("ftp启动异常", e);
+            throw new RuntimeException(e);
         }
         logger.info("ftp启动成功,端口号:" + port);
-        logger.info("ftp启动成功,被动端口:" + passivePorts);
     }
 
     @PreDestroy
@@ -125,7 +131,7 @@ public class MyFtpServer {
         if (!exist) {
             List<Authority> authorities = new ArrayList<>();
             authorities.add(new WritePermission());
-            authorities.add(new ConcurrentLoginPermission(2000, 2000));
+            authorities.add(new ConcurrentLoginPermission(0, 0));
             BaseUser user = new BaseUser();
             user.setName(username);
             user.setPassword(password);
