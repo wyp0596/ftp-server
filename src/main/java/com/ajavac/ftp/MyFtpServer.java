@@ -48,6 +48,8 @@ public class MyFtpServer {
     private String passivePorts;
     @Value("${ftp.max-login}")
     private Integer maxLogin;
+    @Value("${ftp.max-threads}")
+    private Integer maxThreads;
     @Value("${ftp.username}")
     private String username;
     @Value("${ftp.password}")
@@ -74,6 +76,7 @@ public class MyFtpServer {
         ConnectionConfigFactory connectionConfigFactory = new ConnectionConfigFactory();
         connectionConfigFactory.setAnonymousLoginEnabled(false);
         connectionConfigFactory.setMaxLogins(maxLogin);
+        connectionConfigFactory.setMaxThreads(maxThreads);
         serverFactory.setConnectionConfig(connectionConfigFactory.createConnectionConfig());
 
         ListenerFactory listenerFactory = new ListenerFactory();
