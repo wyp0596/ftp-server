@@ -14,6 +14,7 @@ logging:
 ftp:
   port: 2121
   passive-ports:
+  max-login: 0
   username: admin
   password: admin
   home-dir: res/

@@ -46,6 +46,8 @@ public class MyFtpServer {
     private int port;
     @Value("${ftp.passive-ports}")
     private String passivePorts;
+    @Value("${ftp.max-login}")
+    private Integer maxLogin;
     @Value("${ftp.username}")
     private String username;
     @Value("${ftp.password}")
@@ -71,7 +73,7 @@ public class MyFtpServer {
         // FTP服务连接配置
         ConnectionConfigFactory connectionConfigFactory = new ConnectionConfigFactory();
         connectionConfigFactory.setAnonymousLoginEnabled(false);
-        connectionConfigFactory.setMaxLogins(0);
+        connectionConfigFactory.setMaxLogins(maxLogin);
         serverFactory.setConnectionConfig(connectionConfigFactory.createConnectionConfig());
 
         ListenerFactory listenerFactory = new ListenerFactory();
