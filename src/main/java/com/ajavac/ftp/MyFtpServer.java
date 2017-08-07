@@ -19,6 +19,8 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,7 +63,7 @@ public class MyFtpServer {
     @PostConstruct
     private void start() {
         //检查目录是否存在,不存在则创建目录
-        mkDir(homeDir);
+        mkHomeDir(homeDir);
         //创建配置文件
         try {
             createConfigFile();
@@ -171,7 +173,7 @@ public class MyFtpServer {
     public void setHomeDir(String homeDir) throws FtpException, IOException {
         User userInfo = um.getUserByName(um.getAdminName());
         BaseUser baseUser = new BaseUser(userInfo);
-        mkDir(homeDir);
+        mkHomeDir(homeDir);
         baseUser.setHomeDirectory(homeDir);
         um.save(baseUser);
         //保存配置
@@ -242,15 +244,12 @@ public class MyFtpServer {
                 usedSpace, totalSpace);
     }
 
-    private void mkDir(String dir) {
-        File dirFile = Paths.get(dir).toFile();
-        if (!dirFile.exists()) {
-            boolean result = dirFile.mkdir();
-            if (!result) {
-                logger.warn("创建目录失败");
-                return;
-            }
-            logger.info("创建目录成功");
+    private void mkHomeDir(String homeDir) {
+        try {
+            Files.createDirectories(Paths.get(homeDir, "temp"));
+        } catch (IOException e) {
+            logger.warn("创建目录失败");
+            throw new UncheckedIOException(e);
         }
     }
 
